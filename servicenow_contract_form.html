@@ -369,8 +369,7 @@
   window.addEventListener('load', function () {
     showBanner('waiting', '⏳ Waiting for Salesforce opportunity data…');
     // Tell the parent Salesforce frame we are ready to receive data
-    //window.parent.postMessage({ type: 'SERVICENOW_READY' }, '*');
-    window.opener.postMessage({ type: 'SERVICENOW_READY' }, '*');
+    window.parent.postMessage({ type: 'SERVICENOW_READY' }, '*');
     console.log('[ServiceNow POC] Ready signal sent to parent.');
   });
 
@@ -469,22 +468,15 @@
     });
 
     // Send confirmation back to Salesforce
-    //window.parent.postMessage({
-    //  type: 'CONTRACT_CREATED',
-    //  payload: {
-      //  contractNumber: contractNum,
-     //   sfOpportunityId: oppId,
-     //   contractName: name
-    //  }
-   // }, '*');
-window.opener.postMessage({
+    window.parent.postMessage({
       type: 'CONTRACT_CREATED',
-      payload: {
+     payload: {
         contractNumber: contractNum,
-        sfOpportunityId: oppId,
-        contractName: name
-      }
+       sfOpportunityId: oppId,
+       contractName: name
+     }
     }, '*');
+
     document.getElementById('contractNum').textContent = contractNum;
     document.getElementById('successOverlay').classList.add('show');
   }
