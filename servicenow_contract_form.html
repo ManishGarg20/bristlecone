@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ServiceNow – Create Contract</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .sn-header {
+      background: #293e40;
+      color: #fff;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sn-header .logo {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #81b5a1;
+    }
+    .sn-header .page-title {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    /* ── Status banner ── */
+    #statusBanner {
+      display: none;
+      padding: 10px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      align-items: center;
+      gap: 8px;
+    }
+    #statusBanner.waiting  { background: #fff3cd; color: #856404; display: flex; }
+    #statusBanner.received { background: #d1e7dd; color: #0f5132; display: flex; }
+
+    .pulse {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(.7); }
+    }
+
+    /* ── Main card ── */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+      margin: 24px auto;
+      width: 94%;
+      max-width: 820px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: #293e40;
+      color: #fff;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-header span.icon { font-size: 18px; }
+
+    .sf-badge {
+      margin-left: auto;
+      background: #0070d2;
+      color: #fff;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    /* ── Form grid ── */
+    .form-body { padding: 24px; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: #888;
+      margin: 18px 0 10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-grid.full { grid-template-columns: 1fr; }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #444;
+    }
+    .field label .required { color: #d93025; margin-left: 2px; }
+
+    .field input, .field select, .field textarea {
+      border: 1px solid #d0d7de;
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 13px;
+      color: #1a1a1a;
+      background: #fff;
+      transition: border .2s, box-shadow .2s;
+      width: 100%;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: #0070d2;
+      box-shadow: 0 0 0 3px rgba(0,112,210,.15);
+    }
+    .field input.sf-populated {
+      background: #f0f8ff;
+      border-color: #81b5a1;
+    }
+    .field textarea { resize: vertical; min-height: 80px; }
+
+    /* ── SF data panel ── */
+    #sfDataPanel {
+      display: none;
+      background: #f0f8ff;
+      border: 1px solid #81b5a1;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+    #sfDataPanel .panel-title {
+      font-weight: 700;
+      color: #0070d2;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #sfDataPanel .data-row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    #sfDataPanel .data-item { color: #333; }
+    #sfDataPanel .data-item span { font-weight: 600; color: #0070d2; }
+
+    /* ── Buttons ── */
+    .form-actions {
+      padding: 16px 24px;
+      background: #f8f9fa;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      padding: 9px 20px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background .2s;
+    }
+    .btn-primary { background: #0070d2; color: #fff; }
+    .btn-primary:hover { background: #005fb2; }
+    .btn-secondary { background: #fff; color: #444; border: 1px solid #d0d7de; }
+    .btn-secondary:hover { background: #f3f3f3; }
+
+    /* ── Success overlay ── */
+    #successOverlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+    #successOverlay.show { display: flex; }
+    .success-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 36px 48px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.2);
+      max-width: 400px;
+    }
+    .success-icon { font-size: 52px; margin-bottom: 12px; }
+    .success-card h2 { color: #0f5132; margin-bottom: 8px; }
+    .success-card p  { color: #555; font-size: 13px; margin-bottom: 20px; }
+    .success-card .contract-num {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0070d2;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="sn-header">
+  <div class="logo">ServiceNow</div>
+  <div class="page-title">Contract Management &nbsp;›&nbsp; New Contract</div>
+</div>
+
+<!-- Status banner -->
+<div id="statusBanner" class="waiting">
+  <div class="pulse"></div>
+  <span id="statusText">Waiting for Salesforce opportunity data…</span>
+</div>
+
+<!-- Main card -->
+<div class="card">
+  <div class="card-header">
+    <span class="icon">📄</span>
+    Create Contract Record
+    <span class="sf-badge" id="sfBadge" style="display:none">✓ Salesforce Data Received</span>
+  </div>
+
+  <div class="form-body">
+
+    <!-- SF data summary strip -->
+    <div id="sfDataPanel">
+      <div class="panel-title">⚡ Data received from Salesforce Opportunity</div>
+      <div class="data-row" id="sfDataRows"></div>
+    </div>
+
+    <!-- Section: Salesforce Reference -->
+    <div class="section-label">Salesforce Reference</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Opportunity ID <span class="required">*</span></label>
+        <input type="text" id="sf_opp_id" placeholder="Will be auto-filled from Salesforce" readonly />
+      </div>
+      <div class="field">
+        <label>Opportunity Name <span class="required">*</span></label>
+        <input type="text" id="sf_opp_name" placeholder="Will be auto-filled from Salesforce" readonly />
+      </div>
+      <div class="field">
+        <label>Account ID</label>
+        <input type="text" id="sf_account_id" placeholder="Will be auto-filled from Salesforce" readonly />
+      </div>
+      <div class="field">
+        <label>Account Name</label>
+        <input type="text" id="sf_account_name" placeholder="Will be auto-filled from Salesforce" readonly />
+      </div>
+    </div>
+
+    <!-- Section: Contract Details -->
+    <div class="section-label">Contract Details</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Contract Name <span class="required">*</span></label>
+        <input type="text" id="contract_name" placeholder="Enter contract name" />
+      </div>
+      <div class="field">
+        <label>Contract Type <span class="required">*</span></label>
+        <select id="contract_type">
+          <option value="">-- Select Type --</option>
+          <option>Master Service Agreement</option>
+          <option>Statement of Work</option>
+          <option>Non-Disclosure Agreement</option>
+          <option>License Agreement</option>
+          <option>Amendment</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Contract Value ($)</label>
+        <input type="number" id="contract_value" placeholder="Will be pre-filled from Opportunity" />
+      </div>
+      <div class="field">
+        <label>Currency</label>
+        <select id="currency">
+          <option>USD</option>
+          <option>EUR</option>
+          <option>GBP</option>
+          <option>INR</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Section: Dates -->
+    <div class="section-label">Contract Dates</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Start Date <span class="required">*</span></label>
+        <input type="date" id="start_date" />
+      </div>
+      <div class="field">
+        <label>End Date <span class="required">*</span></label>
+        <input type="date" id="end_date" />
+      </div>
+      <div class="field">
+        <label>Opportunity Close Date</label>
+        <input type="date" id="sf_close_date" readonly />
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="status">
+          <option>Draft</option>
+          <option>Under Review</option>
+          <option>Approved</option>
+          <option>Active</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Section: Notes -->
+    <div class="section-label">Additional Information</div>
+    <div class="form-grid full">
+      <div class="field">
+        <label>Contract Description</label>
+        <textarea id="description" placeholder="Enter contract description or scope of work…"></textarea>
+      </div>
+    </div>
+
+  </div><!-- /form-body -->
+
+  <div class="form-actions">
+    <button class="btn btn-secondary" onclick="resetForm()">Cancel</button>
+    <button class="btn btn-secondary" onclick="saveDraft()">Save as Draft</button>
+    <button class="btn btn-primary" onclick="submitContract()">Create Contract</button>
+  </div>
+</div>
+
+<!-- Success Overlay -->
+<div id="successOverlay">
+  <div class="success-card">
+    <div class="success-icon">✅</div>
+    <h2>Contract Created!</h2>
+    <div class="contract-num" id="contractNum"></div>
+    <p>The contract record has been successfully created in ServiceNow and linked to the Salesforce Opportunity.</p>
+    <button class="btn btn-primary" onclick="closeSuccess()">Done</button>
+  </div>
+</div>
+
+<script>
+  // ── 1. Signal to Salesforce that this page is ready
+  window.addEventListener('load', function () {
+    showBanner('waiting', '⏳ Waiting for Salesforce opportunity data…');
+    // Tell the parent Salesforce frame we are ready to receive data
+    window.parent.postMessage({ type: 'SERVICENOW_READY' }, '*');
+    console.log('[ServiceNow POC] Ready signal sent to parent.');
+  });
+
+  // ── 2. Listen for postMessage from Salesforce
+  window.addEventListener('message', function (event) {
+    // In production: validate event.origin against your SF domain
+    // if (event.origin !== 'https://your-org.lightning.force.com') return;
+
+    console.log('[ServiceNow POC] Message received:', event.data);
+
+    if (event.data && event.data.type === 'SF_OPPORTUNITY_DATA') {
+      populateForm(event.data.payload);
+    }
+  });
+
+  // ── 3. Fill form with Salesforce data
+  function populateForm(data) {
+    // Reference fields (read-only)
+    setField('sf_opp_id',      data.id        || '');
+    setField('sf_opp_name',    data.name      || '');
+    setField('sf_account_id',  data.accountId || '');
+    setField('sf_account_name',data.accountName || '');
+    setField('sf_close_date',  data.closeDate ? data.closeDate.split('T')[0] : '');
+
+    // Editable fields pre-filled
+    setField('contract_name',  data.name ? 'Contract – ' + data.name : '');
+    setField('contract_value', data.amount || '');
+
+    if (data.closeDate) {
+      setField('end_date', data.closeDate.split('T')[0]);
+    }
+
+    // Auto-set today as start date
+    setField('start_date', new Date().toISOString().split('T')[0]);
+
+    // Show SF data panel
+    showSFPanel(data);
+
+    // Update banner & badge
+    showBanner('received', '✅ Salesforce opportunity data received and form pre-filled!');
+    document.getElementById('sfBadge').style.display = 'inline-block';
+  }
+
+  function setField(id, value) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.value = value;
+    if (value) el.classList.add('sf-populated');
+  }
+
+  function showSFPanel(data) {
+    var panel = document.getElementById('sfDataPanel');
+    var rows  = document.getElementById('sfDataRows');
+    panel.style.display = 'block';
+
+    var items = [
+      { label: 'Opp ID',       val: data.id },
+      { label: 'Opp Name',     val: data.name },
+      { label: 'Amount',       val: data.amount ? '$' + Number(data.amount).toLocaleString() : '—' },
+      { label: 'Account',      val: data.accountName || data.accountId || '—' },
+      { label: 'Close Date',   val: data.closeDate ? data.closeDate.split('T')[0] : '—' },
+      { label: 'Stage',        val: data.stageName || '—' }
+    ];
+
+    rows.innerHTML = items.map(function(i) {
+      return '<div class="data-item">' + i.label + ': <span>' + (i.val || '—') + '</span></div>';
+    }).join('');
+  }
+
+  function showBanner(type, msg) {
+    var b = document.getElementById('statusBanner');
+    b.className = type;
+    document.getElementById('statusText').textContent = msg;
+  }
+
+  // ── 4. Form actions
+  function submitContract() {
+    var oppId = document.getElementById('sf_opp_id').value;
+    var name  = document.getElementById('contract_name').value;
+    var type  = document.getElementById('contract_type').value;
+    var start = document.getElementById('start_date').value;
+    var end   = document.getElementById('end_date').value;
+
+    if (!name || !type || !start || !end) {
+      alert('Please fill in all required fields (Contract Name, Type, Start Date, End Date).');
+      return;
+    }
+
+    var contractNum = 'CON-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 90000 + 10000);
+
+    // In production: POST to ServiceNow REST API here
+    console.log('[ServiceNow POC] Submitting contract:', {
+      contractNumber: contractNum,
+      sfOpportunityId: oppId,
+      contractName: name
+    });
+
+    // Send confirmation back to Salesforce
+    window.parent.postMessage({
+      type: 'CONTRACT_CREATED',
+      payload: {
+        contractNumber: contractNum,
+        sfOpportunityId: oppId,
+        contractName: name
+      }
+    }, '*');
+
+    document.getElementById('contractNum').textContent = contractNum;
+    document.getElementById('successOverlay').classList.add('show');
+  }
+
+  function saveDraft() {
+    alert('Draft saved successfully! (POC simulation)');
+  }
+
+  function resetForm() {
+    if (confirm('Cancel and clear the form?')) {
+      document.querySelectorAll('input:not([readonly]), select, textarea').forEach(function(el) {
+        el.value = '';
+        el.classList.remove('sf-populated');
+      });
+    }
+  }
+
+  function closeSuccess() {
+    document.getElementById('successOverlay').classList.remove('show');
+  }
+</script>
+</body>
+</html>
